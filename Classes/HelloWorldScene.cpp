@@ -25,7 +25,7 @@ bool HelloWorld::init()
 {
     //////////////////////////////
     // 1. super init first
-    if ( !Layer::init() )
+    if ( !LayerColor::initWithColor(ccc4(255, 255, 255, 255)))
     {
         return false;
     }
