@@ -49,9 +49,9 @@ bool HelloWorld::init()
 
 	// Add start button
 	auto startMenuItem = MenuItemImage::create(
-											"CloseNormal.png",
-											"CloseSelected.png",
-											CC_CALLBACK_1(HelloWorld::menuCloseCallback, this));
+											"StartNormal.png",
+											"StartSelected.png",
+											CC_CALLBACK_1(HelloWorld::menuStartCallback, this));
 	startMenuItem->setPosition(Vec2(origin.x + visibleSize.width / 2, origin.y + visibleSize.height * 1 / 3));
 
 	menuItems.pushBack(startMenuItem);
@@ -105,4 +105,9 @@ void HelloWorld::menuCloseCallback(Ref* pSender)
     //_eventDispatcher->dispatchEvent(&customEndEvent);
     
     
+}
+
+void HelloWorld::menuStartCallback(cocos2d::Ref* pSender)
+{
+	// Director::getInstance()->pushScene(Background2048::createScene());
 }
