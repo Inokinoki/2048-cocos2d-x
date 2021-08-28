@@ -29,6 +29,8 @@ bool Background2048::init()
 	Color4F bgColorF(bgColor);
 	Color4B boardColor(0xbb, 0xad, 0xa0, 0xff);
 	Color4F boardColorF(boardColor);
+	Color4B squareColor(0xcc, 0xc0, 0xb3, 0xff);
+	Color4F squareColorF(squareColor);
 	if (!LayerColor::initWithColor(black))
 	{
 		return false;
@@ -71,6 +73,35 @@ bool Background2048::init()
 								origin.y + marginHeight + boardMargin + boardWidth);
 	boardRectNode->drawPolygon(boardRectangle, 4, boardColorF, 1, boardColorF);
 	this->addChild(boardRectNode, -4);
+
+	// init square localtion
+	int square_width = (int)(boardWidth * 0.2);
+	int square_margin = (int)(boardWidth * 0.04);
+	int square_group_y = origin.y + marginHeight + boardMargin;
+	int square_group_x = origin.x + marginWidth + boardMargin;
+	for (int i=0;i<=3;i++) {
+		square_location_x[i] = (int)(square_group_x +
+			square_margin * (i + 1) +
+			square_width * i);
+	}
+	for (int i = 0; i <= 3; i++) {
+		square_location_y[i] = (int)(square_group_y +
+			square_margin * (i + 1) +
+			square_width * i);
+	}
+	for (int i = 0; i < 4; i++)
+	{
+		for (int j = 0; j < 4; j++) {
+			auto rectNode = DrawNode::create();
+			Vec2 rectangle[4];
+			rectangle[0] = Vec2(square_location_x[j], square_location_y[i]);
+			rectangle[1] = Vec2(square_location_x[j] + square_width, square_location_y[i]);
+			rectangle[2] = Vec2(square_location_x[j] + square_width, square_location_y[i] + square_width);
+			rectangle[3] = Vec2(square_location_x[j], square_location_y[i] + square_width);
+			rectNode->drawPolygon(rectangle, 4, squareColorF, 1, squareColorF);
+			this->addChild(rectNode, -3);
+		}
+	}
 
 	/////////////////////////////
 	// 2. add a menu item with "X" image, which is clicked to quit the program

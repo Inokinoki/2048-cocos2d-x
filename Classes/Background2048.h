@@ -9,6 +9,9 @@ class Background2048 : public cocos2d::LayerColor
 {
 	int height;
 	int width;
+
+	int square_location_x[4];
+	int square_location_y[4];
 public:
 	static cocos2d::Scene* createScene();
 
