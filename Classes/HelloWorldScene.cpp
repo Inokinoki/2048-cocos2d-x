@@ -109,5 +109,5 @@ void HelloWorld::menuCloseCallback(Ref* pSender)
 
 void HelloWorld::menuStartCallback(cocos2d::Ref* pSender)
 {
-	// Director::getInstance()->pushScene(Background2048::createScene());
+	Director::getInstance()->pushScene(Background2048::createScene());
 }
