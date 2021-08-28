@@ -27,6 +27,8 @@ bool Background2048::init()
 	Color3B black3(0, 0, 0);
 	Color4B bgColor(0xfa, 0xf8, 0xef, 0xff);
 	Color4F bgColorF(bgColor);
+	Color4B boardColor(0xbb, 0xad, 0xa0, 0xff);
+	Color4F boardColorF(boardColor);
 	if (!LayerColor::initWithColor(black))
 	{
 		return false;
@@ -46,15 +48,29 @@ bool Background2048::init()
 	}
 	int marginWidth = (visibleSize.width - width) / 2;
 	int marginHeight = (visibleSize.height - height) / 2;
-	auto rectNode = DrawNode::create();
-	Vec2 rectangle[4];
-	rectangle[0] = Vec2(origin.x + marginWidth, origin.y + marginHeight);
-	rectangle[1] = Vec2(origin.x + marginWidth + width, origin.y + marginHeight);
-	rectangle[2] = Vec2(origin.x + marginWidth + width, origin.y + marginHeight + height);
-	rectangle[3] = Vec2(origin.x + marginWidth, origin.y + marginHeight + height);
-	rectNode->drawPolygon(rectangle, 4, bgColorF, 1, bgColorF);
-	this->addChild(rectNode, -1);
-	// auto background = Sprite::createWithTexture();
+	auto bgRectNode = DrawNode::create();
+	Vec2 bgRectangle[4];
+	bgRectangle[0] = Vec2(origin.x + marginWidth, origin.y + marginHeight);
+	bgRectangle[1] = Vec2(origin.x + marginWidth + width, origin.y + marginHeight);
+	bgRectangle[2] = Vec2(origin.x + marginWidth + width, origin.y + marginHeight + height);
+	bgRectangle[3] = Vec2(origin.x + marginWidth, origin.y + marginHeight + height);
+	bgRectNode->drawPolygon(bgRectangle, 4, bgColorF, 1, bgColorF);
+	this->addChild(bgRectNode, -5);
+
+	int boardMargin = width * 0.05;
+	int boardWidth = width - 2 * boardMargin;
+	auto boardRectNode = DrawNode::create();
+	Vec2 boardRectangle[4];
+	boardRectangle[0] = Vec2(origin.x + marginWidth + boardMargin,
+								origin.y + marginHeight + boardMargin);
+	boardRectangle[1] = Vec2(origin.x + marginWidth + boardMargin + boardWidth,
+								origin.y + marginHeight + boardMargin);
+	boardRectangle[2] = Vec2(origin.x + marginWidth + boardMargin + boardWidth,
+								origin.y + marginHeight + boardMargin + boardWidth);
+	boardRectangle[3] = Vec2(origin.x + marginWidth + boardMargin,
+								origin.y + marginHeight + boardMargin + boardWidth);
+	boardRectNode->drawPolygon(boardRectangle, 4, boardColorF, 1, boardColorF);
+	this->addChild(boardRectNode, -4);
 
 	/////////////////////////////
 	// 2. add a menu item with "X" image, which is clicked to quit the program
