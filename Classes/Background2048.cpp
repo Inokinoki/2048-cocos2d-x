@@ -22,13 +22,39 @@ bool Background2048::init()
 {
 	//////////////////////////////
 	// 1. super init first
-	if (!Layer::init())
+	Color4B white(0xff, 0xff, 0xff, 0xff);
+	Color4B black(0, 0, 0, 0);
+	Color3B black3(0, 0, 0);
+	Color4B bgColor(0xfa, 0xf8, 0xef, 0xff);
+	Color4F bgColorF(bgColor);
+	if (!LayerColor::initWithColor(black))
 	{
 		return false;
 	}
 
 	auto visibleSize = Director::getInstance()->getVisibleSize();
 	Vec2 origin = Director::getInstance()->getVisibleOrigin();
+
+	// Create group background
+	height = visibleSize.height;
+	width = visibleSize.width;
+	if (height * REF_WIDTH / REF_HEIGHT > width) {
+		height = width * REF_HEIGHT / REF_WIDTH;
+	}
+	else {
+		width = height * REF_WIDTH / REF_HEIGHT;
+	}
+	int marginWidth = (visibleSize.width - width) / 2;
+	int marginHeight = (visibleSize.height - height) / 2;
+	auto rectNode = DrawNode::create();
+	Vec2 rectangle[4];
+	rectangle[0] = Vec2(origin.x + marginWidth, origin.y + marginHeight);
+	rectangle[1] = Vec2(origin.x + marginWidth + width, origin.y + marginHeight);
+	rectangle[2] = Vec2(origin.x + marginWidth + width, origin.y + marginHeight + height);
+	rectangle[3] = Vec2(origin.x + marginWidth, origin.y + marginHeight + height);
+	rectNode->drawPolygon(rectangle, 4, bgColorF, 1, bgColorF);
+	this->addChild(rectNode, -1);
+	// auto background = Sprite::createWithTexture();
 
 	/////////////////////////////
 	// 2. add a menu item with "X" image, which is clicked to quit the program
@@ -58,6 +84,7 @@ bool Background2048::init()
 	// create and initialize a label
 
 	auto label = Label::createWithTTF("Inoki Cocos2d-x 2048", "fonts/Marker Felt.ttf", 24);
+	label->setColor(black3);
 
 	// position the label on the center of the screen
 	label->setPosition(Vec2(origin.x + visibleSize.width / 2,
