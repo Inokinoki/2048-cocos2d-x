@@ -75,7 +75,7 @@ bool Background2048::init()
 	this->addChild(boardRectNode, -4);
 
 	// init square localtion
-	int square_width = (int)(boardWidth * 0.2);
+	square_width = (int)(boardWidth * 0.2);
 	int square_margin = (int)(boardWidth * 0.04);
 	int square_group_y = origin.y + marginHeight + boardMargin;
 	int square_group_x = origin.x + marginWidth + boardMargin;
@@ -153,6 +153,13 @@ bool Background2048::init()
 	touchListener->onTouchBegan = CC_CALLBACK_2(Background2048::onTouchBegan, this);
 	touchListener->onTouchEnded = CC_CALLBACK_2(Background2048::onTouchEnded, this);
 	_eventDispatcher->addEventListenerWithSceneGraphPriority(touchListener, this);
+
+	// Create sprite
+	cache = SpriteFrameCache::getInstance();
+	cache->addSpriteFramesWithFile("squares.plist");
+
+	// Create the first square
+	randomCreateSquare();
 
 	return true;
 }
@@ -236,4 +243,42 @@ void Background2048::onTouchEnded(Touch* touch, Event* event)
 		}
 	}
 	log("touch ended");
+}
+
+void Background2048::randomCreateSquare()
+{
+	int num_x = 0, num_y = 0;
+
+	num_x = random() % 4;
+	num_y = random() % 4;
+
+	while (gameState.square_state[num_x][num_y] != 0)
+	{
+		num_x = random() % 4;
+		num_y = random() % 4;
+	}
+
+	int radom_num = random() %50;
+	if (radom_num < 49)
+	{
+		gameState.square_state[num_x][num_y] = 2;
+		auto s = Sprite::createWithSpriteFrame(cache->getSpriteFrameByName("_2.png"));
+		s->setPosition(Vec2(square_location_x[num_x], square_location_y[num_y]));
+		s->setAnchorPoint(Vec2(0, 0));
+		s->setScale((float)square_width / s->getContentSize().width);
+		this->addChild(s, 0);
+
+		// Test action
+		auto moveBy = MoveBy::create(2, Vec2(200, 0));
+		s->runAction(moveBy);
+	}
+	else
+	{
+		gameState.square_state[num_x][num_y] = 4;
+		auto s = Sprite::createWithSpriteFrame(cache->getSpriteFrameByName("_4.png"));
+		s->setPosition(Vec2(square_location_x[num_x], square_location_y[num_y]));
+		s->setAnchorPoint(Vec2(0, 0));
+		s->setScale((float)square_width / s->getContentSize().width);
+		this->addChild(s, 0);
+	}
 }

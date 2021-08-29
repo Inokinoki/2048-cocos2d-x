@@ -17,7 +17,13 @@ class Background2048 : public cocos2d::LayerColor
 	int square_location_x[4];
 	int square_location_y[4];
 
+	int square_width;
+
 	cocos2d::Vec2 touchBegin;
+protected:
+	void randomCreateSquare();
+
+	cocos2d::SpriteFrameCache *cache;
 public:
 	static cocos2d::Scene* createScene();
 
