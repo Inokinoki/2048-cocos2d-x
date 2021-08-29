@@ -148,6 +148,12 @@ bool Background2048::init()
 	listener->onKeyReleased = CC_CALLBACK_2(Background2048::onKeyReleased, this);
 	_eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);
 
+	// Add touch listener
+	auto touchListener = EventListenerTouchOneByOne::create();
+	touchListener->onTouchBegan = CC_CALLBACK_2(Background2048::onTouchBegan, this);
+	touchListener->onTouchEnded = CC_CALLBACK_2(Background2048::onTouchEnded, this);
+	_eventDispatcher->addEventListenerWithSceneGraphPriority(touchListener, this);
+
 	return true;
 }
 
@@ -192,4 +198,42 @@ void Background2048::onKeyReleased(EventKeyboard::KeyCode keyCode, Event* event)
 	default:
 		break;
 	}
+}
+
+bool Background2048::onTouchBegan(Touch* touch, Event* event)
+{
+	touchBegin = touch->getLocation();
+	return true;
+}
+
+void Background2048::onTouchEnded(Touch* touch, Event* event)
+{
+	Vec2 offset = touch->getLocation() - touchBegin;
+	if (abs(offset.x) > abs(offset.y))
+	{
+		if (offset.x < -5)
+		{
+			// TODO: LEFT
+			log("left");
+		}
+		if (offset.x > 5)
+		{
+			// TODO: RIGHT
+			log("right");
+		}
+	}
+	else
+	{
+		if (offset.y < -5)
+		{
+			// TODO: DOWN
+			log("down");
+		}
+		if (offset.y > 5)
+		{
+			// TODO: UP
+			log("up");
+		}
+	}
+	log("touch ended");
 }

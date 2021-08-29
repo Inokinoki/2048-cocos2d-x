@@ -16,12 +16,16 @@ class Background2048 : public cocos2d::LayerColor
 
 	int square_location_x[4];
 	int square_location_y[4];
+
+	cocos2d::Vec2 touchBegin;
 public:
 	static cocos2d::Scene* createScene();
 
 	// a selector callback
 	void menuCloseCallback(cocos2d::Ref* pSender);
 	void onKeyReleased(cocos2d::EventKeyboard::KeyCode keyCode, cocos2d::Event* event);
+	bool onTouchBegan(cocos2d::Touch* touch, cocos2d::Event* event);
+	void onTouchEnded(cocos2d::Touch* touch, cocos2d::Event* event);
 
 	virtual bool init();
 
