@@ -143,6 +143,11 @@ bool Background2048::init()
 	// Reset the game state
 	gameState.restart();
 
+	// Add keyboard listener
+	auto listener = EventListenerKeyboard::create();
+	listener->onKeyReleased = CC_CALLBACK_2(Background2048::onKeyReleased, this);
+	_eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);
+
 	return true;
 }
 
@@ -161,4 +166,30 @@ void Background2048::menuCloseCallback(Ref* pSender)
 	//_eventDispatcher->dispatchEvent(&customEndEvent);
 
 
+}
+
+void Background2048::onKeyReleased(EventKeyboard::KeyCode keyCode, Event* event)
+{
+	log("Key with keycode %d released", keyCode);
+	switch (keyCode)
+	{
+	case EventKeyboard::KeyCode::KEY_UP_ARROW:
+	case EventKeyboard::KeyCode::KEY_DPAD_UP:
+		// Up
+		break;
+	case EventKeyboard::KeyCode::KEY_DOWN_ARROW:
+	case EventKeyboard::KeyCode::KEY_DPAD_DOWN:
+		// Down
+		break;
+	case EventKeyboard::KeyCode::KEY_LEFT_ARROW:
+	case EventKeyboard::KeyCode::KEY_DPAD_LEFT:
+		// Left
+		break;
+	case EventKeyboard::KeyCode::KEY_RIGHT_ARROW:
+	case EventKeyboard::KeyCode::KEY_DPAD_RIGHT:
+		// Right
+		break;
+	default:
+		break;
+	}
 }
