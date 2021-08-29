@@ -2,11 +2,15 @@
 
 #include "cocos2d.h"
 
+#include "State2048.h"
+
 #define REF_HEIGHT	1920
 #define REF_WIDTH	1080
 
 class Background2048 : public cocos2d::LayerColor
 {
+	State2048 gameState;
+
 	int height;
 	int width;
 

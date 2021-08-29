@@ -140,6 +140,9 @@ bool Background2048::init()
 	// add the label as a child to this layer
 	this->addChild(label, 1);
 
+	// Reset the game state
+	gameState.restart();
+
 	return true;
 }
 
