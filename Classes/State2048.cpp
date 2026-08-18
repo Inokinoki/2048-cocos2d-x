@@ -146,6 +146,9 @@ void State2048::slideLine(const int xs[4], const int ys[4], std::vector<TileMove
 	Slot slots[4];
 	int slotCount = 0;
 	for (int i = 0; i < sourceCount; i++) {
+		// Merge only with a tile that has not already merged this move.
+		// [2, 0, 2, 0] left -> [4, 0, 0, 0]
+		// [4, 0, 2, 2] left -> [4, 4, 0, 0], not [8, 0, 0, 0]
 		if (slotCount > 0 &&
 			slots[slotCount - 1].fromCount == 1 &&
 			slots[slotCount - 1].value == sources[i].value) {
