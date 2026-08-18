@@ -1,45 +1,66 @@
 #include "Background2048.h"
 
+#include <algorithm>
+#include <cmath>
+#include <cstdio>
+#include <cstring>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
 USING_NS_CC;
+
+namespace
+{
+	const int kTileTag = 0x2048;
+	const Color3B kTextBrown(0x77, 0x6e, 0x65);
+	const Color3B kTextWhite(255, 255, 255);
+	const Color4B kOverlayColor(238, 228, 218, 196);
+	const float kMoveDuration = 0.12f;
+	const float kSwipeThreshold = 24.0f;
+}
 
 Scene* Background2048::createScene()
 {
-	// 'scene' is an autorelease object
 	auto scene = Scene::create();
-
-	// 'layer' is an autorelease object
 	auto layer = Background2048::create();
-
-	// add layer as a child to scene
 	scene->addChild(layer);
-
-	// return the scene
 	return scene;
 }
 
-// on "init" you need to initialize your instance
 bool Background2048::init()
 {
-	//////////////////////////////
-	// 1. super init first
-	Color4B white(0xff, 0xff, 0xff, 0xff);
 	Color4B black(0, 0, 0, 0);
-	Color3B black3(0, 0, 0);
 	Color4B bgColor(0xfa, 0xf8, 0xef, 0xff);
 	Color4F bgColorF(bgColor);
 	Color4B boardColor(0xbb, 0xad, 0xa0, 0xff);
 	Color4F boardColorF(boardColor);
 	Color4B squareColor(0xcc, 0xc0, 0xb3, 0xff);
 	Color4F squareColorF(squareColor);
+	Color4F hudBoxColor(boardColorF);
+
 	if (!LayerColor::initWithColor(black))
 	{
 		return false;
 	}
 
+	std::memset(tileSprites, 0, sizeof(tileSprites));
+	animating = false;
+	inputBlocked = false;
+	wonShown = false;
+	moveGeneration = 0;
+	scoreLabel = nullptr;
+	bestLabel = nullptr;
+	overlay = nullptr;
+	overlayTitle = nullptr;
+	continueItem = nullptr;
+	retryItem = nullptr;
+	bestScore = UserDefault::getInstance()->getIntegerForKey("best_score", 0);
+
 	auto visibleSize = Director::getInstance()->getVisibleSize();
 	Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
-	// Create group background
 	height = visibleSize.height;
 	width = visibleSize.width;
 	if (height * REF_WIDTH / REF_HEIGHT > width) {
@@ -74,7 +95,6 @@ bool Background2048::init()
 	boardRectNode->drawPolygon(boardRectangle, 4, boardColorF, 1, boardColorF);
 	this->addChild(boardRectNode, -4);
 
-	// init square localtion
 	square_width = (int)(boardWidth * 0.2);
 	int square_margin = (int)(boardWidth * 0.04);
 	int square_group_y = origin.y + marginHeight + boardMargin;
@@ -103,12 +123,60 @@ bool Background2048::init()
 		}
 	}
 
-	/////////////////////////////
-	// 2. add a menu item with "X" image, which is clicked to quit the program
-	//    you may modify it.
+	float hudBottom = origin.y + marginHeight + boardMargin + boardWidth + width * 0.05f;
+	float hudHeight = width * 0.14f;
+	float boxWidth = width * 0.32f;
+	float boxGap = width * 0.04f;
+	float totalBoxes = boxWidth * 2 + boxGap;
+	float scoreBoxX = origin.x + marginWidth + (width - totalBoxes) / 2;
+	float bestBoxX = scoreBoxX + boxWidth + boxGap;
+	int captionFont = std::max(12, (int)(width * 0.038f));
+	int scoreFont = std::max(20, (int)(width * 0.065f));
+	int titleFont = std::max(36, (int)(width * 0.13f));
+	int buttonFont = std::max(18, (int)(width * 0.05f));
+
+	auto hudNode = DrawNode::create();
+	auto drawBox = [&](float x, float y, float w, float h) {
+		Vec2 box[4] = {
+			Vec2(x, y),
+			Vec2(x + w, y),
+			Vec2(x + w, y + h),
+			Vec2(x, y + h)
+		};
+		hudNode->drawPolygon(box, 4, hudBoxColor, 1, hudBoxColor);
+	};
+	drawBox(scoreBoxX, hudBottom, boxWidth, hudHeight);
+	drawBox(bestBoxX, hudBottom, boxWidth, hudHeight);
+	this->addChild(hudNode, -2);
+
+	auto scoreCaption = Label::createWithTTF("SCORE", "fonts/arial.ttf", captionFont);
+	scoreCaption->setColor(Color3B(0xee, 0xe4, 0xda));
+	scoreCaption->setPosition(Vec2(scoreBoxX + boxWidth / 2, hudBottom + hudHeight * 0.72f));
+	this->addChild(scoreCaption, 1);
+
+	auto bestCaption = Label::createWithTTF("BEST", "fonts/arial.ttf", captionFont);
+	bestCaption->setColor(Color3B(0xee, 0xe4, 0xda));
+	bestCaption->setPosition(Vec2(bestBoxX + boxWidth / 2, hudBottom + hudHeight * 0.72f));
+	this->addChild(bestCaption, 1);
+
+	scoreLabel = Label::createWithTTF("0", "fonts/arial.ttf", scoreFont);
+	scoreLabel->setColor(kTextWhite);
+	scoreLabel->setPosition(Vec2(scoreBoxX + boxWidth / 2, hudBottom + hudHeight * 0.32f));
+	this->addChild(scoreLabel, 1);
+
+	bestLabel = Label::createWithTTF("0", "fonts/arial.ttf", scoreFont);
+	bestLabel->setColor(kTextWhite);
+	bestLabel->setPosition(Vec2(bestBoxX + boxWidth / 2, hudBottom + hudHeight * 0.32f));
+	this->addChild(bestLabel, 1);
+
+	auto title2048 = Label::createWithTTF("2048", "fonts/Marker Felt.ttf", titleFont);
+	title2048->setColor(kTextBrown);
+	title2048->setPosition(Vec2(origin.x + marginWidth + width / 2,
+		hudBottom + hudHeight + width * 0.22f));
+	this->addChild(title2048, 1);
+
 	Vector<MenuItem*> menuItems;
 
-	// add a "close" icon to exit the progress. it's an autorelease object
 	auto closeItem = MenuItemImage::create(
 		"CloseNormal.png",
 		"CloseSelected.png",
@@ -117,90 +185,146 @@ bool Background2048::init()
 	closeItem->setPosition(Vec2(origin.x + visibleSize.width - closeItem->getContentSize().width / 2,
 		origin.y + closeItem->getContentSize().height / 2));
 
-	menuItems.pushBack(closeItem);
+	auto newGameLabel = Label::createWithTTF("New Game", "fonts/arial.ttf", buttonFont);
+	newGameLabel->setColor(kTextWhite);
+	auto newGameItem = MenuItemLabel::create(
+		newGameLabel,
+		CC_CALLBACK_1(Background2048::menuRestartCallback, this));
+	newGameItem->setPosition(Vec2(origin.x + marginWidth + width / 2,
+		hudBottom + hudHeight + width * 0.08f));
 
-	// create menu, it's an autorelease object
+	auto newGameBg = DrawNode::create();
+	float ngw = width * 0.32f;
+	float ngh = width * 0.08f;
+	Vec2 ngBox[4] = {
+		Vec2(-ngw / 2, -ngh / 2),
+		Vec2(ngw / 2, -ngh / 2),
+		Vec2(ngw / 2, ngh / 2),
+		Vec2(-ngw / 2, ngh / 2)
+	};
+	newGameBg->drawPolygon(ngBox, 4, Color4F(Color4B(0x8f, 0x7a, 0x66, 0xff)), 1, Color4F(Color4B(0x8f, 0x7a, 0x66, 0xff)));
+	newGameBg->setPosition(newGameItem->getPosition());
+	this->addChild(newGameBg, 0);
+
+	menuItems.pushBack(closeItem);
+	menuItems.pushBack(newGameItem);
+
 	auto menu = Menu::createWithArray(menuItems);
 	menu->setPosition(Vec2::ZERO);
 	this->addChild(menu, 1);
 
-	/////////////////////////////
-	// 3. add your codes below...
-
-	// add a label shows "Hello World"
-	// create and initialize a label
-
 	auto label = Label::createWithTTF("Inoki Cocos2d-x 2048", "fonts/Marker Felt.ttf", 24);
-	label->setColor(black3);
-
-	// position the label on the center of the screen
+	label->setColor(kTextBrown);
 	label->setPosition(Vec2(origin.x + visibleSize.width / 2,
 		origin.y + visibleSize.height - label->getContentSize().height));
-
-	// add the label as a child to this layer
 	this->addChild(label, 1);
 
-	// Reset the game state
-	gameState.restart();
+	overlay = Node::create();
+	overlay->setVisible(false);
+	this->addChild(overlay, 20);
 
-	// Add keyboard listener
+	auto overlayVeil = DrawNode::create();
+	overlayVeil->drawPolygon(boardRectangle, 4, Color4F(kOverlayColor), 1, Color4F(kOverlayColor));
+	overlay->addChild(overlayVeil);
+
+	overlayTitle = Label::createWithTTF("", "fonts/Marker Felt.ttf", 48);
+	overlayTitle->setColor(kTextBrown);
+	overlayTitle->setPosition(Vec2(
+		origin.x + marginWidth + boardMargin + boardWidth / 2,
+		origin.y + marginHeight + boardMargin + boardWidth * 0.62f));
+	overlay->addChild(overlayTitle);
+
+	auto continueLabel = Label::createWithTTF("Continue", "fonts/arial.ttf", buttonFont);
+	continueLabel->setColor(Color3B(0x8f, 0x7a, 0x66));
+	continueItem = MenuItemLabel::create(
+		continueLabel,
+		CC_CALLBACK_1(Background2048::menuContinueCallback, this));
+
+	auto retryLabel = Label::createWithTTF("Try Again", "fonts/arial.ttf", buttonFont);
+	retryLabel->setColor(Color3B(0x8f, 0x7a, 0x66));
+	retryItem = MenuItemLabel::create(
+		retryLabel,
+		CC_CALLBACK_1(Background2048::menuRestartCallback, this));
+
+	continueItem->setPosition(Vec2(
+		origin.x + marginWidth + boardMargin + boardWidth / 2,
+		origin.y + marginHeight + boardMargin + boardWidth * 0.42f));
+	retryItem->setPosition(Vec2(
+		origin.x + marginWidth + boardMargin + boardWidth / 2,
+		origin.y + marginHeight + boardMargin + boardWidth * 0.28f));
+
+	auto overlayMenu = Menu::create(continueItem, retryItem, nullptr);
+	overlayMenu->setPosition(Vec2::ZERO);
+	overlay->addChild(overlayMenu);
+
+	gameState.restart();
+	updateScoreLabels();
+
 	auto listener = EventListenerKeyboard::create();
 	listener->onKeyReleased = CC_CALLBACK_2(Background2048::onKeyReleased, this);
 	_eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);
 
-	// Add touch listener
 	auto touchListener = EventListenerTouchOneByOne::create();
 	touchListener->onTouchBegan = CC_CALLBACK_2(Background2048::onTouchBegan, this);
 	touchListener->onTouchEnded = CC_CALLBACK_2(Background2048::onTouchEnded, this);
 	_eventDispatcher->addEventListenerWithSceneGraphPriority(touchListener, this);
 
-	// Create sprite
 	cache = SpriteFrameCache::getInstance();
 	cache->addSpriteFramesWithFile("squares.plist");
+	tileScale = 1.0f;
 
-	// Create the first square
-	randomCreateSquare();
+	randomCreateSquare(true);
+	randomCreateSquare(true);
 
 	return true;
 }
 
 void Background2048::menuCloseCallback(Ref* pSender)
 {
-	//Close the cocos2d-x game scene and quit the application
 	Director::getInstance()->popToRootScene();
 
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_IOS)
 	exit(0);
 #endif
+}
 
-	/*To navigate back to native iOS screen(if present) without quitting the application  ,do not use Director::getInstance()->end() and exit(0) as given above,instead trigger a custom event created in RootViewController.mm as below*/
+void Background2048::menuRestartCallback(Ref* pSender)
+{
+	restartGame();
+}
 
-	//EventCustom customEndEvent("game_scene_close_event");
-	//_eventDispatcher->dispatchEvent(&customEndEvent);
-
-
+void Background2048::menuContinueCallback(Ref* pSender)
+{
+	hideOverlay();
 }
 
 void Background2048::onKeyReleased(EventKeyboard::KeyCode keyCode, Event* event)
 {
-	log("Key with keycode %d released", keyCode);
 	switch (keyCode)
 	{
 	case EventKeyboard::KeyCode::KEY_UP_ARROW:
 	case EventKeyboard::KeyCode::KEY_DPAD_UP:
-		// Up
+	case EventKeyboard::KeyCode::KEY_W:
+		handleMove(State2048::Direction::Up);
 		break;
 	case EventKeyboard::KeyCode::KEY_DOWN_ARROW:
 	case EventKeyboard::KeyCode::KEY_DPAD_DOWN:
-		// Down
+	case EventKeyboard::KeyCode::KEY_S:
+		handleMove(State2048::Direction::Down);
 		break;
 	case EventKeyboard::KeyCode::KEY_LEFT_ARROW:
 	case EventKeyboard::KeyCode::KEY_DPAD_LEFT:
-		// Left
+	case EventKeyboard::KeyCode::KEY_A:
+		handleMove(State2048::Direction::Left);
 		break;
 	case EventKeyboard::KeyCode::KEY_RIGHT_ARROW:
 	case EventKeyboard::KeyCode::KEY_DPAD_RIGHT:
-		// Right
+	case EventKeyboard::KeyCode::KEY_D:
+		handleMove(State2048::Direction::Right);
+		break;
+	case EventKeyboard::KeyCode::KEY_ESCAPE:
+	case EventKeyboard::KeyCode::KEY_BACK:
+		menuCloseCallback(nullptr);
 		break;
 	default:
 		break;
@@ -216,69 +340,247 @@ bool Background2048::onTouchBegan(Touch* touch, Event* event)
 void Background2048::onTouchEnded(Touch* touch, Event* event)
 {
 	Vec2 offset = touch->getLocation() - touchBegin;
-	if (abs(offset.x) > abs(offset.y))
+	if (offset.length() < kSwipeThreshold) {
+		return;
+	}
+
+	if (std::abs(offset.x) > std::abs(offset.y))
 	{
-		if (offset.x < -5)
-		{
-			// TODO: LEFT
-			log("left");
+		if (offset.x < 0) {
+			handleMove(State2048::Direction::Left);
 		}
-		if (offset.x > 5)
-		{
-			// TODO: RIGHT
-			log("right");
+		else {
+			handleMove(State2048::Direction::Right);
 		}
 	}
 	else
 	{
-		if (offset.y < -5)
-		{
-			// TODO: DOWN
-			log("down");
+		if (offset.y < 0) {
+			handleMove(State2048::Direction::Down);
 		}
-		if (offset.y > 5)
-		{
-			// TODO: UP
-			log("up");
+		else {
+			handleMove(State2048::Direction::Up);
 		}
 	}
-	log("touch ended");
 }
 
-void Background2048::randomCreateSquare()
+void Background2048::handleMove(State2048::Direction direction)
 {
-	int num_x = 0, num_y = 0;
-
-	num_x = random() % 4;
-	num_y = random() % 4;
-
-	while (gameState.square_state[num_x][num_y] != 0)
-	{
-		num_x = random() % 4;
-		num_y = random() % 4;
+	if (animating || inputBlocked) {
+		return;
 	}
 
-	int radom_num = random() %50;
-	if (radom_num < 49)
-	{
-		gameState.square_state[num_x][num_y] = 2;
-		auto s = Sprite::createWithSpriteFrame(cache->getSpriteFrameByName("_2.png"));
-		s->setPosition(Vec2(square_location_x[num_x], square_location_y[num_y]));
-		s->setAnchorPoint(Vec2(0, 0));
-		s->setScale((float)square_width / s->getContentSize().width);
-		this->addChild(s, 0);
+	std::vector<State2048::TileMove> moves;
+	if (!gameState.move(direction, moves)) {
+		return;
+	}
 
-		// Test action
-		auto moveBy = MoveBy::create(2, Vec2(200, 0));
-		s->runAction(moveBy);
+	applyMoveAnimations(moves);
+}
+
+void Background2048::applyMoveAnimations(const std::vector<State2048::TileMove> &moves)
+{
+	animating = true;
+	const int generation = ++moveGeneration;
+
+	Sprite *sourceSprites[4][4];
+	std::memcpy(sourceSprites, tileSprites, sizeof(tileSprites));
+	std::memset(tileSprites, 0, sizeof(tileSprites));
+
+	if (moves.empty()) {
+		if (generation == moveGeneration) {
+			finishMove();
+		}
+		return;
 	}
-	else
-	{
-		gameState.square_state[num_x][num_y] = 4;
-		auto s = Sprite::createWithSpriteFrame(cache->getSpriteFrameByName("_4.png"));
-		s->setPosition(Vec2(square_location_x[num_x], square_location_y[num_y]));
-		s->setAnchorPoint(Vec2(0, 0));
-		s->setScale((float)square_width / s->getContentSize().width);
-		this->addChild(s, 0);
+
+	auto remaining = std::make_shared<int>((int)moves.size());
+
+	for (const auto &move : moves) {
+		Sprite *sprite = sourceSprites[move.fromX][move.fromY];
+		sourceSprites[move.fromX][move.fromY] = nullptr;
+		if (!sprite) {
+			if (--(*remaining) == 0 && generation == moveGeneration) {
+				finishMove();
+			}
+			continue;
+		}
+
+		sprite->setLocalZOrder(move.disappearing ? 4 : 3);
+		auto dest = positionFor(move.toX, move.toY);
+		auto moveTo = MoveTo::create(kMoveDuration, dest);
+		auto done = CallFunc::create([this, sprite, move, remaining, generation]() {
+			if (generation != moveGeneration) {
+				return;
+			}
+
+			if (move.disappearing) {
+				sprite->removeFromParent();
+			}
+			else {
+				sprite->setLocalZOrder(2);
+				tileSprites[move.toX][move.toY] = sprite;
+				if (move.merged) {
+					auto frame = cache->getSpriteFrameByName(frameNameForValue(move.newValue));
+					if (frame) {
+						sprite->setSpriteFrame(frame);
+					}
+					sprite->runAction(Sequence::create(
+						ScaleTo::create(0.08f, tileScale * 1.15f),
+						ScaleTo::create(0.08f, tileScale),
+						nullptr));
+				}
+			}
+
+			if (--(*remaining) == 0) {
+				finishMove();
+			}
+		});
+		sprite->runAction(Sequence::create(EaseOut::create(moveTo, 2.0f), done, nullptr));
 	}
+}
+
+void Background2048::finishMove()
+{
+	randomCreateSquare(true);
+	updateScoreLabels();
+
+	if (gameState.hasWon() && !wonShown) {
+		wonShown = true;
+		animating = false;
+		showWinOverlay();
+		return;
+	}
+
+	if (!gameState.canMove()) {
+		animating = false;
+		showGameOverOverlay();
+		return;
+	}
+
+	animating = false;
+}
+
+void Background2048::randomCreateSquare(bool animate)
+{
+	std::vector<std::pair<int, int>> empties;
+	for (int x = 0; x < 4; x++) {
+		for (int y = 0; y < 4; y++) {
+			if (gameState.square_state[x][y] == 0) {
+				empties.push_back(std::make_pair(x, y));
+			}
+		}
+	}
+
+	if (empties.empty()) {
+		return;
+	}
+
+	int index = cocos2d::random(0, (int)empties.size() - 1);
+	int num_x = empties[index].first;
+	int num_y = empties[index].second;
+	int value = (cocos2d::random(0, 9) == 0) ? 4 : 2;
+	gameState.square_state[num_x][num_y] = value;
+	createTileSprite(value, num_x, num_y, animate);
+}
+
+Sprite *Background2048::createTileSprite(int value, int x, int y, bool animate)
+{
+	auto frame = cache->getSpriteFrameByName(frameNameForValue(value));
+	auto sprite = Sprite::createWithSpriteFrame(frame);
+	sprite->setAnchorPoint(Vec2(0, 0));
+	sprite->setTag(kTileTag);
+	tileScale = (float)square_width / sprite->getContentSize().width;
+	sprite->setPosition(positionFor(x, y));
+	sprite->setScale(animate ? 0.0f : tileScale);
+	this->addChild(sprite, 2);
+	tileSprites[x][y] = sprite;
+
+	if (animate) {
+		sprite->runAction(EaseBackOut::create(ScaleTo::create(0.18f, tileScale)));
+	}
+	return sprite;
+}
+
+std::string Background2048::frameNameForValue(int value) const
+{
+	if (value < 2) {
+		value = 2;
+	}
+	if (value > 8192) {
+		value = 8192;
+	}
+	char buf[32];
+	std::snprintf(buf, sizeof(buf), "_%d.png", value);
+	return buf;
+}
+
+Vec2 Background2048::positionFor(int x, int y) const
+{
+	return Vec2(square_location_x[x], square_location_y[y]);
+}
+
+void Background2048::updateScoreLabels()
+{
+	if (gameState.score > bestScore) {
+		bestScore = gameState.score;
+		UserDefault::getInstance()->setIntegerForKey("best_score", bestScore);
+		UserDefault::getInstance()->flush();
+	}
+
+	if (scoreLabel) {
+		scoreLabel->setString(StringUtils::toString(gameState.score));
+	}
+	if (bestLabel) {
+		bestLabel->setString(StringUtils::toString(bestScore));
+	}
+}
+
+void Background2048::clearTiles()
+{
+	Vector<Node*> children = this->getChildren();
+	for (auto child : children) {
+		if (child && child->getTag() == kTileTag) {
+			child->stopAllActions();
+			child->removeFromParent();
+		}
+	}
+	std::memset(tileSprites, 0, sizeof(tileSprites));
+}
+
+void Background2048::restartGame()
+{
+	moveGeneration++;
+	animating = false;
+	clearTiles();
+	hideOverlay();
+	gameState.restart();
+	wonShown = false;
+	updateScoreLabels();
+	randomCreateSquare(true);
+	randomCreateSquare(true);
+}
+
+void Background2048::showWinOverlay()
+{
+	inputBlocked = true;
+	overlayTitle->setString("You Win!");
+	continueItem->setVisible(true);
+	retryItem->setVisible(true);
+	overlay->setVisible(true);
+}
+
+void Background2048::showGameOverOverlay()
+{
+	inputBlocked = true;
+	overlayTitle->setString("Game Over!");
+	continueItem->setVisible(false);
+	retryItem->setVisible(true);
+	overlay->setVisible(true);
+}
+
+void Background2048::hideOverlay()
+{
+	inputBlocked = false;
+	overlay->setVisible(false);
 }
