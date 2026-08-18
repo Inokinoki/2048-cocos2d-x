@@ -323,7 +323,6 @@ void Background2048::onKeyReleased(EventKeyboard::KeyCode keyCode, Event* event)
 		handleMove(State2048::Direction::Right);
 		break;
 	case EventKeyboard::KeyCode::KEY_ESCAPE:
-	case EventKeyboard::KeyCode::KEY_BACK:
 		menuCloseCallback(nullptr);
 		break;
 	default:
